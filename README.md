@@ -9,26 +9,24 @@ A development sandbox for rapidly prototyping and iterating on restoration plann
 - Git
 - npm (comes with Node.js)
 
-### Step 1: Create Next.js Project
+
+### Step 1: Clone Repository
 ```bash
-npx create-next-app@latest epistemxprototype
+git clone https://github.com/yourusername/epistemxprototype.git
 cd epistemxprototype
 ```
 
-When prompted, select:
-- TypeScript: Yes
-- ESLint: Yes
-- Tailwind CSS: Yes
-- `src/` directory: Yes
-- App Router: Yes
-- Default import alias: Yes
+### Step 2: Install All Dependencies
+```bash
+npm install
+```
 
-### Step 2: Install Dependencies
+### Step 3: Install Additional Dependencies
 ```bash
 npm install @radix-ui/react-tabs @radix-ui/react-select @radix-ui/react-slider @radix-ui/react-switch lucide-react recharts
 ```
 
-### Step 3: Install UI Components
+### Step 4: Install UI Components
 ```bash
 npx shadcn-ui@latest init
 ```
