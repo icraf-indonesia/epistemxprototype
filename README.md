@@ -16,7 +16,18 @@ git clone https://github.com/yourusername/epistemxprototype.git
 cd epistemxprototype
 ```
 
-### Step 2: Install All Dependencies
+### Step 2: Initialize Next.js Project & Install All Dependencies
+```bash
+npx create-next-app@latest .
+```
+Select:
+- TypeScript: Yes
+- ESLint: Yes 
+- Tailwind CSS: Yes
+- src/ directory: Yes
+- App Router: Yes
+- Import alias: Yes
+
 ```bash
 npm install
 ```
