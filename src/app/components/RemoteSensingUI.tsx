@@ -1,5 +1,6 @@
 "use client"
 import React, { useState } from 'react';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -23,7 +24,18 @@ import {
   RefreshCw
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Plus } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 const RemoteSensingUI = () => {
   const [activeTab, setActiveTab] = useState('map');
   const [selectedRegion, setSelectedRegion] = useState('');
@@ -53,12 +65,75 @@ const RemoteSensingUI = () => {
     (_, i) => 1984 + i
   );
 
+  const [layers, setLayers] = useState([
+    {
+      id: 'osm',
+      name: 'Base Map',
+      visible: true,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    },
+    {
+      id: 'satellite',
+      name: 'Satellite Imagery',
+      visible: false,
+      attribution: '© Esri',
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    }
+  ]);
+
+  const SortableLayer = ({id, name, visible, onVisibilityChange}: {
+    id: string;
+    name: string;
+    visible: boolean;
+    onVisibilityChange: (id: string, checked: boolean) => void;
+  }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+    } = useSortable({id});
+  
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+  
+    return (
+      <div ref={setNodeRef} style={style}
+        className="flex items-center justify-between p-1 bg-gray-50 rounded mb-1"
+      >
+        <div {...attributes} {...listeners} className="flex-1 cursor-move">
+          <span className="text-xs">
+            {name}
+          </span>
+        </div>
+        <div className="scale-75">
+          <Switch 
+            checked={visible}
+            onCheckedChange={(checked) => onVisibilityChange(id, checked)}
+          />
+        </div>
+      </div>
+    );
+  };
+  
+  
+  const toggleLayerVisibility = (layerId: string, isVisible: boolean) => {
+    setLayers(prev => prev.map(layer => {
+      if (layer.id === layerId) return { ...layer, visible: isVisible };
+      return layer;
+    }));
+  };
+
   const renderDatasetControls = () => (
     <div className="space-y-6 p-4 bg-gray-50 rounded-lg">
       <div>
         <h3 className="text-lg font-medium mb-4">Dataset Selection</h3>
         <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+          <div className="flex items-center justify-between p-2 bg-gray-50 rounded mb-2 cursor-move">
             <div>
               <p className="font-medium">Landsat</p>
               <p className="text-sm text-gray-500">30m resolution</p>
@@ -190,24 +265,79 @@ const RemoteSensingUI = () => {
         </Select>    
         </div>
       </div>
-      <div className="bg-white rounded-lg h-96 overflow-hidden">
-        {typeof window !== 'undefined' && (
-          <MapContainer 
-            center={[-2.5, 118]}
-            zoom={4}
-            minZoom={4}
-            maxBounds={[
-              [-11, 95],
-              [6, 141]
-            ]}
-            style={{ height: '100%', width: '100%' }}
-          >
-            <TileLayer
-              attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-          </MapContainer>
-        )}
+        <div className="flex gap-4">
+          <Card className="w-48">
+          <CardHeader className="flex flex-row items-center justify-between text-base font-medium">
+            <span className="text-sm">Layers</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>
+                  Add from device
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  Add from dataset
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  Add composite
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardHeader>
+            <CardContent>
+              <DndContext 
+                sensors={useSensors(
+                  useSensor(PointerSensor),
+                  useSensor(KeyboardSensor, {
+                    coordinateGetter: sortableKeyboardCoordinates,
+                  })
+                )}
+                collisionDetection={closestCenter}
+                onDragEnd={({active, over}) => {
+                  if (over && active.id !== over.id) {
+                    const oldIndex = layers.findIndex(layer => layer.id === active.id)
+                    const newIndex = layers.findIndex(layer => layer.id === over.id)
+                    setLayers(arrayMove(layers, oldIndex, newIndex))
+                  }
+                }}
+              >
+                <SortableContext items={layers.map(layer => layer.id)} strategy={verticalListSortingStrategy}>
+                  {layers.map(layer => (
+                    <SortableLayer
+                      key={layer.id}
+                      id={layer.id}
+                      name={layer.name}
+                      visible={layer.visible}
+                      onVisibilityChange={toggleLayerVisibility}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            </CardContent>
+          </Card>
+        <div className="flex-1 bg-white rounded-lg h-96 overflow-hidden">
+          {typeof window !== 'undefined' && (
+            <MapContainer 
+              center={[-2.5, 118]}
+              zoom={4}
+              minZoom={4}
+              maxBounds={[
+                [-11, 95],
+                [6, 141]
+              ]}
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+            </MapContainer>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -287,3 +417,11 @@ const RemoteSensingUI = () => {
   );
 };
 export default RemoteSensingUI;
+
+interface Layer {
+  id: string;
+  name: string;
+  visible: boolean;
+  attribution: string;
+  url: string;
+}
