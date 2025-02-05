@@ -22,7 +22,8 @@ import {
   Download,
   RefreshCw
 } from 'lucide-react';
-
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer } from 'react-leaflet';
 const RemoteSensingUI = () => {
   const [activeTab, setActiveTab] = useState('map');
   const [selectedRegion, setSelectedRegion] = useState('');
@@ -174,27 +175,43 @@ const RemoteSensingUI = () => {
             Focus Region
           </Button>
         </div>
+        <div>
         <Select value={selectedRegion} onValueChange={setSelectedRegion}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Select Region" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="z-[1000]">
             {regions.map(region => (
               <SelectItem key={region} value={region}>
                 {region}
               </SelectItem>
             ))}
           </SelectContent>
-        </Select>
+        </Select>    
+        </div>
       </div>
-      <div className="bg-white rounded-lg h-96 flex items-center justify-center border-2 border-dashed border-gray-200">
-        Map Visualization Area
+      <div className="bg-white rounded-lg h-96 overflow-hidden">
+        {typeof window !== 'undefined' && (
+          <MapContainer 
+            center={[-2.5, 118]}
+            zoom={4}
+            minZoom={4}
+            maxBounds={[
+              [-11, 95],
+              [6, 141]
+            ]}
+            style={{ height: '100%', width: '100%' }}
+          >
+            <TileLayer
+              attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+          </MapContainer>
+        )}
       </div>
     </div>
   );
-
-  const renderAnalysisControls = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  const renderAnalysisControls = () => (    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Card>
         <CardHeader>Composite Generation</CardHeader>
         <CardContent>
@@ -269,5 +286,4 @@ const RemoteSensingUI = () => {
     </div>
   );
 };
-
 export default RemoteSensingUI;
