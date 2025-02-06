@@ -48,6 +48,17 @@ const RemoteSensingUI = () => {
     sentinel2: false,
     palsar: false
   });
+
+  const [selectedDataType, setSelectedDataType] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+
+  const datasetItems = [
+    { id: 1, name: 'Landsat Collection', type: 'satellite', source: 'USGS', tags: ['satellite imagery'] },
+    { id: 2, name: 'Sentinel-2', type: 'satellite', source: 'ESA', tags: ['satellite imagery'] },
+    { id: 3, name: 'Temperature', type: 'variable', source: 'WorldClim', tags: ['other variable'] },
+    { id: 4, name: 'Rainfall', type: 'variable', source: 'CHIRPS', tags: ['other variable'] },
+  ];
   
   // Region options from the code
   const regions = [
@@ -129,111 +140,139 @@ const RemoteSensingUI = () => {
   };
 
   const renderDatasetControls = () => (
-    <div className="space-y-6 p-4 bg-gray-50 rounded-lg">
-      <div>
-        <h3 className="text-lg font-medium mb-4">Dataset Selection</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center justify-between p-2 bg-gray-50 rounded mb-2 cursor-move">
-            <div>
-              <p className="font-medium">Landsat</p>
-              <p className="text-sm text-gray-500">30m resolution</p>
+    <div className="space-y-6">
+      <SearchPanel 
+        selectedDataType={selectedDataType}
+        setSelectedDataType={setSelectedDataType}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+      />
+      
+      {selectedDataType === 'satellite' ? (
+        <div className="space-y-6 p-4 bg-gray-50 rounded-lg">
+          <div>
+            <h3 className="text-lg font-medium mb-4">Dataset Selection</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-2 bg-gray-50 rounded mb-2 cursor-move">
+                <div>
+                  <p className="font-medium">Landsat</p>
+                  <p className="text-sm text-gray-500">30m resolution</p>
+                </div>
+                <Switch 
+                  checked={selectedSensors.landsat}
+                  onCheckedChange={(checked) => 
+                    setSelectedSensors(prev => ({...prev, landsat: checked}))}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                <div>
+                  <p className="font-medium">Sentinel-1</p>
+                  <p className="text-sm text-gray-500">10m resolution</p>
+                </div>
+                <Switch 
+                  checked={selectedSensors.sentinel1}
+                  onCheckedChange={(checked) => 
+                    setSelectedSensors(prev => ({...prev, sentinel1: checked}))}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                <div>
+                  <p className="font-medium">Sentinel-2</p>
+                  <p className="text-sm text-gray-500">10m resolution</p>
+                </div>
+                <Switch 
+                  checked={selectedSensors.sentinel2}
+                  onCheckedChange={(checked) => 
+                    setSelectedSensors(prev => ({...prev, sentinel2: checked}))}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                <div>
+                  <p className="font-medium">PALSAR</p>
+                  <p className="text-sm text-gray-500">25m resolution</p>
+                </div>
+                <Switch 
+                  checked={selectedSensors.palsar}
+                  onCheckedChange={(checked) => 
+                    setSelectedSensors(prev => ({...prev, palsar: checked}))}
+                />
+              </div>
             </div>
-            <Switch 
-              checked={selectedSensors.landsat}
-              onCheckedChange={(checked) => 
-                setSelectedSensors(prev => ({...prev, landsat: checked}))}
-            />
           </div>
-          <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
-            <div>
-              <p className="font-medium">Sentinel-1</p>
-              <p className="text-sm text-gray-500">10m resolution</p>
+  
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Temporal Settings</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">Start Year</label>
+                <Select value={startYear.toString()} onValueChange={(val) => setStartYear(parseInt(val))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearRange.map(year => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">End Year</label>
+                <Select value={endYear.toString()} onValueChange={(val) => setEndYear(parseInt(val))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearRange.map(year => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <Switch 
-              checked={selectedSensors.sentinel1}
-              onCheckedChange={(checked) => 
-                setSelectedSensors(prev => ({...prev, sentinel1: checked}))}
-            />
           </div>
-          <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+  
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Processing Parameters</h3>
             <div>
-              <p className="font-medium">Sentinel-2</p>
-              <p className="text-sm text-gray-500">10m resolution</p>
+              <label className="text-sm text-gray-600 mb-1 block">
+                Cloud Cover Threshold: {cloudCover}%
+              </label>
+              <Slider
+                value={[cloudCover]}
+                onValueChange={([value]) => setCloudCover(value)}
+                max={100}
+                step={1}
+              />
             </div>
-            <Switch 
-              checked={selectedSensors.sentinel2}
-              onCheckedChange={(checked) => 
-                setSelectedSensors(prev => ({...prev, sentinel2: checked}))}
-            />
           </div>
-          <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
-            <div>
-              <p className="font-medium">PALSAR</p>
-              <p className="text-sm text-gray-500">25m resolution</p>
-            </div>
-            <Switch 
-              checked={selectedSensors.palsar}
-              onCheckedChange={(checked) => 
-                setSelectedSensors(prev => ({...prev, palsar: checked}))}
-            />
+
+          <div className="pt-4">
+            <Button className="w-full" variant="default">
+              <Layers className="mr-2 h-4 w-4" />
+              Add data to layer
+            </Button>
           </div>
         </div>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Temporal Settings</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm text-gray-600 mb-1 block">Start Year</label>
-            <Select value={startYear.toString()} onValueChange={(val) => setStartYear(parseInt(val))}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {yearRange.map(year => (
-                  <SelectItem key={year} value={year.toString()}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-sm text-gray-600 mb-1 block">End Year</label>
-            <Select value={endYear.toString()} onValueChange={(val) => setEndYear(parseInt(val))}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {yearRange.map(year => (
-                  <SelectItem key={year} value={year.toString()}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Processing Parameters</h3>
+      ) : (
         <div>
-          <label className="text-sm text-gray-600 mb-1 block">
-            Cloud Cover Threshold: {cloudCover}%
-          </label>
-          <Slider
-            value={[cloudCover]}
-            onValueChange={([value]) => setCloudCover(value)}
-            max={100}
-            step={1}
-          />
+          <ResultsTable datasetItems={datasetItems} />
+          <div className="mt-4">
+            <Button className="w-full" variant="default">
+              <Layers className="mr-2 h-4 w-4" />
+              Add data to layer
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
-  );
-
-  const renderMapControls = () => (
+  );  const renderMapControls = () => (
     <div className="space-y-4">
       <div className="flex justify-between">
         <div className="flex gap-2">
@@ -380,7 +419,7 @@ const RemoteSensingUI = () => {
     <div className="max-w-6xl mx-auto p-4">
       <Card>
         <CardHeader>
-          <h2 className="text-2xl font-bold">Remote Sensing Analysis</h2>
+          <h2 className="text-2xl font-bold">Epistem X Remote Sensing Analysis</h2>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="map" className="space-y-4">
@@ -425,3 +464,98 @@ interface Layer {
   attribution: string;
   url: string;
 }
+
+interface SearchPanelProps {
+  selectedDataType: string;
+  setSelectedDataType: (value: string) => void;
+  searchQuery: string;
+  setSearchQuery: (value: string) => void;
+  sortBy: string;
+  setSortBy: (value: string) => void;
+}
+
+interface ResultsTableProps {
+  datasetItems: Array<{
+    id: number;
+    name: string;
+    type: string;
+    source: string;
+    tags: string[];
+  }>;
+}
+
+
+const SearchPanel = ({ 
+  selectedDataType, 
+  setSelectedDataType, 
+  searchQuery, 
+  setSearchQuery,
+  sortBy,
+  setSortBy 
+}: SearchPanelProps) => (
+  <div className="bg-gray-50 p-4 rounded-lg">
+    <div className="grid grid-cols-3 gap-4 mb-4">
+      <Select value={selectedDataType} onValueChange={setSelectedDataType}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select Data Type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="satellite">Satellite Imageries</SelectItem>
+          <SelectItem value="other">Other Variables</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <div className="flex gap-2">
+        <Input 
+          placeholder="Search datasets..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      <Select value={sortBy} onValueChange={setSortBy}>
+        <SelectTrigger>
+          <SelectValue placeholder="Sort by" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="name">Name</SelectItem>
+          <SelectItem value="source">Source</SelectItem>
+          <SelectItem value="type">Type</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  </div>
+);
+
+const ResultsTable = ({ datasetItems }: ResultsTableProps) => (
+  <div className="bg-white rounded-lg shadow">
+    <table className="w-full">
+      <thead className="bg-gray-50">
+        <tr>
+          <th className="px-4 py-2 text-left">No.</th>
+          <th className="px-4 py-2 text-left">Variable Name</th>
+          <th className="px-4 py-2 text-left">Tags</th>
+          <th className="px-4 py-2 text-left">Source</th>
+          <th className="px-4 py-2 text-left">Select</th>
+        </tr>
+      </thead>
+      <tbody>
+        {datasetItems.map((item, index) => (
+          <tr key={item.id} className="border-t">
+            <td className="px-4 py-2">{index + 1}</td>
+            <td className="px-4 py-2">{item.name}</td>
+            <td className="px-4 py-2">
+              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                {item.tags.join(', ')}
+              </span>
+            </td>
+            <td className="px-4 py-2">{item.source}</td>
+            <td className="px-4 py-2">
+              <Switch />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
